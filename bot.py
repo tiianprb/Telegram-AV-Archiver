@@ -11,13 +11,13 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 logger = logging.getLogger(__name__)
 
-# API Token
+# Grab API Token from .env file
 load_dotenv()
 API_Token = os.environ.get('API_Token')
 
 
 def start(update, context):
-    update.message.reply_text('Hi! Send me a youtube link for some music 🎵')
+    update.message.reply_text('Hi! Send me a youtube (or supported) link for some music 🎵')
 
 
 def help(update, context):
