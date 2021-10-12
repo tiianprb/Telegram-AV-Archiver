@@ -1,9 +1,9 @@
 import logging
 from telegram import update
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
-import youtube_dl
 import os
 from dotenv import load_dotenv
+import yt_dlp
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -20,22 +20,26 @@ def start(update, context):
     update.message.reply_text('Hi! Send me a youtube (or supported) link for some music 🎵')
 
 
-def help(update, context):
-    update.message.reply_text('This bot can download the audio from a video (Playlists supported). For a list of supported sites visit https://ytdl-org.github.io/youtube-dl/supportedsites.html')
+def help_me(update, context):
+    update.message.reply_text(
+        '1. This bot can download the audio from a video (Playlists supported).\n\n' \
+        '2. For a list of supported sites visit https://ytdl-org.github.io/youtube-dl/supportedsites.html\n\n' \
+        '3. The Telegram API that this bot uses has a 50MB limit for audio files. The bot will not be able to send a file if it is larger than that.\n\n' \
+        '4. Youtube does compress their audio so there are compromises to make when it comes to quality. The bot does download the best quality available')
 
 
 def get_audio(update, context):
-    # Get audio from link
     url = update.message.text
+    # Get audio from link
     ydl_opts = {
         'format': 'bestaudio/best',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3'
+            'preferredcodec': 'mp3',
         }],
         'outtmpl': 'Audio/%(title)s.%(ext)s'
     }
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])
 
     # Send every song that was downloaded
