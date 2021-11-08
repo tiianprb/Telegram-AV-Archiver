@@ -6,6 +6,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import os
 from dotenv import load_dotenv
 import yt_dlp
+import time
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -53,6 +54,7 @@ def get_audio(update, context):
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])
 
+    time.sleep(3)
     # Send every song that was downloaded
     for file in os.listdir("Audio"):
         context.bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.UPLOAD_AUDIO)
@@ -85,7 +87,8 @@ def get_video(update, context):
             os.rename("Video/" + file, "Large/" + file)
             logger.info(f'Moved file {file} to Large folder')
             break
-
+    
+    time.sleep(3)
     # Send every video that was downloaded
     for file in os.listdir("Video"):
         context.bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.UPLOAD_VIDEO)
