@@ -75,6 +75,17 @@ def get_video(update, context):
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])
 
+    # Check file size
+    for file in os.listdir("Video"):
+        if os.path.getsize("Video/" + file) > 50000000:
+            context.bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.TYPING)
+            update.message.reply_text("Sorry the file is too large to send :(, but I did save it in the folder")
+            logger.info(f'File {file} is too large to send')
+            # Move file to "Large" folder
+            os.rename("Video/" + file, "Large/" + file)
+            logger.info(f'Moved file {file} to Large folder')
+            break
+
     # Send every video that was downloaded
     for file in os.listdir("Video"):
         context.bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.UPLOAD_VIDEO)
