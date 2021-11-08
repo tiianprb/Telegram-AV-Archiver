@@ -1,5 +1,7 @@
 import logging
-from telegram import update
+import telegram
+from telegram import update, ParseMode
+from telegram.chataction import ChatAction
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import os
 from dotenv import load_dotenv
@@ -17,20 +19,28 @@ API_Token = os.environ.get('API_Token')
 
 
 def start(update, context):
-    update.message.reply_text('Hi! Send me a youtube (or supported) link for some music 🎵')
+    logger.info(f'User {update.message.chat.first_name} started a chat')
+    context.bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.TYPING)
+    update.message.reply_text('Hi! I can download audio and video from supported links. /help for more info')
 
 
 def help_me(update, context):
+    logger.info(f'User {update.message.chat.first_name} requested help')
+    context.bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.TYPING)
     update.message.reply_text(
         '1. This bot can download the audio from a video (Playlists supported).\n\n' \
-        '2. For a list of supported sites visit https://ytdl-org.github.io/youtube-dl/supportedsites.html\n\n' \
-        '3. The Telegram API that this bot uses has a 50MB limit for audio files. The bot will not be able to send a file if it is larger than that.\n\n' \
-        '4. Youtube does compress their audio so there are compromises to make when it comes to quality. The bot does download the best quality available')
+        '2. To download audio use the /get_audio command. <em>Example: /get_audio https://www.mylink.com </em> .\n\n' \
+        '3. To download a video use the /get_video command. <em> Example: /get_video https://www.mylink.com </em>.\n\n' \
+        '4. For a list of supported sites visit https://ytdl-org.github.io/youtube-dl/supportedsites.html\n\n' \
+        '5. The Telegram API that this bot uses has a 50MB limit for audio files. The bot will not be able to send a file if it is larger than that.\n\n' \
+        '6. Youtube does compress their audio so there are compromises to make when it comes to quality. The bot does download the best quality available', parse_mode=ParseMode.HTML)
 
 
 def get_audio(update, context):
-    url = update.message.text
+    url = context.args[0]
+    logger.info(f'User {update.message.chat.first_name} requested audio from {url}')
     # Get audio from link
+    logger.info(f'Setting downloading options for audio')
     ydl_opts = {
         'format': 'bestaudio/best',
         'postprocessors': [{
@@ -39,33 +49,84 @@ def get_audio(update, context):
         }],
         'outtmpl': 'Audio/%(title)s.%(ext)s'
     }
+    logger.info(f'Bot requested audio from {url}')
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])
 
     # Send every song that was downloaded
     for file in os.listdir("Audio"):
+        context.bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.UPLOAD_AUDIO)
         update.message.reply_audio(audio=open("Audio/" + file, 'rb'), timeout=50)
-
+        logger.info(f'Sent audio file {file}')
     # Delete everything in the Audio Folder
     for file in os.listdir("Audio"):
         os.remove("Audio/" + file)
+        logger.info(f'Deleted audio file {file}')
 
+def get_video(update, context):
+    url = context.args[0]
+    logger.info(f'User {update.message.chat.first_name} requested video from {url}')
+    # Get video from link
+    ydl_opts = {
+        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+        'outtmpl': 'Video/%(title)s.%(ext)s'
+    }
+    logger.info(f'Bot requested video from {url}')
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        ydl.download([url])
+
+    # Send every video that was downloaded
+    for file in os.listdir("Video"):
+        context.bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.UPLOAD_VIDEO)
+        update.message.reply_video(video=open("Video/" + file, 'rb'), timeout=50)
+        logger.info(f'Sent video file {file}')
+
+    # Delete everything in the Video Folder
+    for file in os.listdir("Video"):
+        os.remove("Video/" + file)
+        logger.info(f'Deleted video file {file}')
 
 def error(update, context):
     logger.warning('Update "%s" caused error "%s"', update, context.error)
-    update.message.reply_text("Hmm, that doesn't look like a link I can process. Please try again with another link")
+    logger.info(f'User {update.message.chat.first_name} caused error. Error = {context.error} Type = {type(context.error)}')
+    if type(context.error) == IndexError:
+        update.message.reply_text("Please send a proper command. <strong>See /help for more information</strong>", parse_mode=ParseMode.HTML)
+
+    elif type(context.error) == yt_dlp.utils.DownloadError:
+        context.bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.TYPING)
+        update.message.reply_text("Sorry, the link you sent is not supported.")
+
+    elif type(context.error) == telegram.error.NetworkError:
+        context.bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.TYPING)
+        update.message.reply_text("Sorry the file is too large to send :(")
+
+    else:
+        context.bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.TYPING)
+        update.message.reply_text("Something went wrong. Please try again.")
+    
+def echo(update, context):
+    logger.info(f'User {update.message.chat.first_name} sent a message')
+    update.message.reply_text("Sorry I'm really dumb. I can only understand commands and can't actually have any kind of meaningful conversation with or understand what you said without context. /help for more info")
+    
 
 
 def main():
+    # Updater and dispatcher.
     updater = Updater(API_Token, use_context=True)
-    dp = updater.dispatcher
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("help", help))
-    dp.add_handler(MessageHandler(Filters.text, get_audio))
-    dp.add_error_handler(error)
+    dispatcher = updater.dispatcher
+
+    # Add handlers
+    dispatcher.add_handler(CommandHandler('start', start))
+    dispatcher.add_handler(CommandHandler('help', help_me))
+    dispatcher.add_handler(CommandHandler('get_audio', get_audio, pass_args=True))
+    dispatcher.add_handler(CommandHandler('get_video', get_video, pass_args=True))
+    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, echo))
+    dispatcher.add_error_handler(error)
+    
+    # Start the bot
     updater.start_polling()
     updater.idle()
 
-
 if __name__ == '__main__':
+    logger.info('Starting bot')
     main()
