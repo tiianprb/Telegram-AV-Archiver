@@ -1,4 +1,4 @@
-# Telegraudio
+# Telegram Audio Video Archiver
 
 Self hosted Telegram bot to download audio and video from [supported sites](https://www.github.com/yt-dlp/yt-dlp/blob/master/supportedsites.html)
 
@@ -21,6 +21,7 @@ Commands:
 Limitations: 
 
 - Telegram's Bot API has a [50MB limit](https://core.telegram.org/bots/faq#how-do-i-upload-a-large-file) for audio and video files. So this bot will not work on large video or audio files
+- This limit can be bypassed by hosting your own [Bot API Server](https://github.com/tdlib/telegram-bot-api)
 
 
 
