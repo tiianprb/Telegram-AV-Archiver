@@ -56,6 +56,17 @@ def get_audio(update, context):
         ydl.download([url])
 
     time.sleep(3)
+    # Check file size
+    for file in os.listdir("Audio"):
+        if os.path.getsize("Audio/" + file) > 50000000:
+            context.bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.TYPING)
+            update.message.reply_text("Sorry the file is too large to send :(, but I did save it in the folder")
+            logger.info(f"File {file} is too large to send")
+            # Move file to "Large" folder
+            os.rename("Audio/" + file, "Large/Audio/" + file)
+            logger.info(f"Moved file {file} to Large folder")
+            break
+
     # Send every song that was downloaded
     for file in os.listdir("Audio"):
         context.bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.UPLOAD_AUDIO)
@@ -85,7 +96,7 @@ def get_video(update, context):
             update.message.reply_text("Sorry the file is too large to send :(, but I did save it in the folder")
             logger.info(f"File {file} is too large to send")
             # Move file to "Large" folder
-            os.rename("Video/" + file, "Large/" + file)
+            os.rename("Video/" + file, "Large/Video/" + file)
             logger.info(f"Moved file {file} to Large folder")
             break
     
